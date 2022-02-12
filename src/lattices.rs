@@ -6,8 +6,8 @@ pub trait Lattice: PartialOrd {
 }
 
 pub trait BoundedLattice: Lattice {
-    const TOP : Self;
-    const BOT : Self;
+    const TOP: Self;
+    const BOT: Self;
 }
 
 impl<T: Ord> Lattice for T {
@@ -67,50 +67,51 @@ impl<T: Lattice> LatticeRange<T> {
     }
 }
 
-#[derive(Debug,Copy,Clone,PartialEq,Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct FreeL32 {
-    pub val : u32
+    pub val: u32,
 }
 
 impl FreeL32 {
-    pub fn new(i : u32) -> Self {
-        FreeL32{val: i}
+    pub fn new(i: u32) -> Self {
+        FreeL32 { val: i }
     }
 
-    pub fn generator(i : usize) -> Self {
-        FreeL32{ val : 1 << i}
+    pub fn generator(i: usize) -> Self {
+        FreeL32 { val: 1 << i }
     }
 }
-
-
 
 impl PartialOrd for FreeL32 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         let i1 = self.val & !other.val;
         let i2 = !self.val & other.val;
-        match (i1,i2) {
-            (0,0) => Some(Ordering::Equal),
-            (0,_) => Some(Ordering::Less),
-            (_,0) => Some(Ordering::Greater),
-            _ => None
+        match (i1, i2) {
+            (0, 0) => Some(Ordering::Equal),
+            (0, _) => Some(Ordering::Less),
+            (_, 0) => Some(Ordering::Greater),
+            _ => None,
         }
     }
 }
 
 impl Lattice for FreeL32 {
-    fn meet(self,other: Self) -> Self {
-        FreeL32 {val: self.val & other.val}
+    fn meet(self, other: Self) -> Self {
+        FreeL32 {
+            val: self.val & other.val,
+        }
     }
-    fn join(self,other: Self) -> Self {
-        FreeL32 {val: self.val | other.val}
+    fn join(self, other: Self) -> Self {
+        FreeL32 {
+            val: self.val | other.val,
+        }
     }
 }
 
 impl BoundedLattice for FreeL32 {
-    const TOP : Self = FreeL32 {val : !0};
-    const BOT : Self = FreeL32 {val : 0};
+    const TOP: Self = FreeL32 { val: !0 };
+    const BOT: Self = FreeL32 { val: 0 };
 }
-
 
 // impl<T : Lattice> PartialOrd<T> for LatticeRange<T> {
 //     fn partial_cmp(&self, other : &Self) -> Option<Ordering> {

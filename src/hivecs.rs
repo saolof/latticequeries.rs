@@ -9,7 +9,7 @@ pub struct HiVec<T, const N: usize, const FANOUT: usize> {
 
 impl<T: Copy + Lattice, const N: usize, const FANOUT: usize> HiVec<T, N, FANOUT> {
     pub fn new(table: Vec<T>) -> Self {
-        let mut layers : Vec<Vec<LatticeRange<T>>> = Vec::with_capacity(N);
+        let mut layers: Vec<Vec<LatticeRange<T>>> = Vec::with_capacity(N);
         let ranges = table
             .chunks(FANOUT)
             .map(|chunk| {
@@ -28,10 +28,16 @@ impl<T: Copy + Lattice, const N: usize, const FANOUT: usize> HiVec<T, N, FANOUT>
             .collect();
         layers.push(ranges);
         for l in 1..N {
-            let nextlayer = layers[l-1].chunks(FANOUT)
-            .map(|chunk| {
-                chunk.iter().cloned().reduce(|x,y| x.unite(y)).expect("Impossible: Empty Chunk")
-            }).collect();
+            let nextlayer = layers[l - 1]
+                .chunks(FANOUT)
+                .map(|chunk| {
+                    chunk
+                        .iter()
+                        .cloned()
+                        .reduce(|x, y| x.unite(y))
+                        .expect("Impossible: Empty Chunk")
+                })
+                .collect();
             layers.push(nextlayer)
         }
         HiVec { table, layers }
@@ -88,6 +94,12 @@ impl<T: Copy + Lattice, const N: usize, const FANOUT: usize> HiVec<T, N, FANOUT>
     pub fn query_equals(&self, item: T) -> EqualsQuery<T, N, FANOUT> {
         EqualsQuery { item, hiv: self }
     }
+
+    pub fn query_range(&self, range: LatticeRange<T>) -> RangeQuery<T, N, FANOUT> {
+        RangeQuery { range, hiv: self }
+    }
+
+
 }
 
 pub struct EqualsQuery<'a, T, const N: usize, const FANOUT: usize> {
@@ -121,7 +133,6 @@ pub struct RangeQuery<'a, T, const N: usize, const FANOUT: usize> {
     hiv: &'a HiVec<T, N, FANOUT>,
 }
 
-
 impl<'a, T: Lattice + Copy, const N: usize, const FANOUT: usize> HiQuery<N, FANOUT>
     for RangeQuery<'a, T, N, FANOUT>
 {
@@ -138,8 +149,9 @@ impl<'a, T: Lattice + Copy, const N: usize, const FANOUT: usize> HiQuery<N, FANO
         if layer == 0 {
             self.query_at(i)
         } else {
-            !(self.hiv.layers[layer - 1][i].intersect(self.range).isempty())
+            !(self.hiv.layers[layer - 1][i]
+                .intersect(self.range)
+                .isempty())
         }
     }
-
 }
