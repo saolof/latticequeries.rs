@@ -210,7 +210,7 @@ fn u8offset_to_alphanum(n: u8) -> char {
 }
 
 impl AlphaNumSet {
-    fn new(s: &str) -> Self {
+    pub fn new(s: &str) -> Self {
         let mut bs: u64 = 0;
         for ch in s.chars() {
             bs |= 1 << alphanum_to_u8offset(ch)
@@ -220,13 +220,13 @@ impl AlphaNumSet {
         }
     }
 
-    fn singleton(ch: char) -> Self {
+    pub fn singleton(ch: char) -> Self {
         Self {
             val: FreeL64::generator(alphanum_to_u8offset(ch) as usize),
         }
     }
 
-    fn complement(&self) -> Self {
+    pub fn complement(&self) -> Self {
         Self {
             val: self.val.complement(),
         }

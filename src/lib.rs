@@ -6,7 +6,7 @@ pub mod lattices;
 mod tests {
     use crate::hiqueries::HiQuery;
     use crate::hivecs::HiVec;
-    use crate::lattices::{BoundedLattice, FreeL32, Lattice};
+    use crate::lattices::{AlphaNumSet, BoundedLattice, FreeL32, Lattice};
 
     #[test]
     fn test_constructors_accessors() {
@@ -54,6 +54,7 @@ mod tests {
 
     #[test]
     fn test_lattice() {
+        println!("Test group 1");
         let l1 = FreeL32::new(0b000000010010111);
         let l2 = FreeL32::new(0b000001010010100);
         assert_eq!(l1.join(l2).val, 0b000001010010111);
@@ -62,5 +63,10 @@ mod tests {
         assert_eq!(l1.join(BoundedLattice::BOT), l1);
         assert_eq!(l1.join(BoundedLattice::TOP), BoundedLattice::TOP);
         assert_eq!(l1.meet(BoundedLattice::BOT), BoundedLattice::BOT);
+        println!("test group 2");
+        let a1 = AlphaNumSet::new("hello worldz");
+        let a2 = AlphaNumSet::new("aLZz");
+        let a3 = AlphaNumSet::new("o").complement();
+        assert_eq!(a1.join(a2).meet(a3).to_string(), "LZadehlrwz:");
     }
 }
