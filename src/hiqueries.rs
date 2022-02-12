@@ -6,7 +6,6 @@ pub trait HiQuery<const N: usize, const FANOUT: usize> {
 
     fn findnext(&self, mut i: usize) -> Option<usize> {
         while i < self.length() {
-            println!("{i}");
             if self.query_at(i) {
                 return Some(i);
             }
@@ -17,8 +16,6 @@ pub trait HiQuery<const N: usize, const FANOUT: usize> {
                 l += 1;
                 j /= FANOUT;
                 step *= FANOUT;
-                println!("l: {l}, j: {j}, step: {step}");
-                println!("hiqueried to {}",self.hiquery(l-1, j));
             }
             i += step;
         }
@@ -29,7 +26,6 @@ pub trait HiQuery<const N: usize, const FANOUT: usize> {
         let mut n = 0;
         let mut i = 0;
         while let Some(j) = self.findnext(i) {
-            // println!("j: {j}");
             i = j + 1;
             n += 1;
         }

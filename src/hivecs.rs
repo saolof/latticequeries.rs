@@ -95,7 +95,7 @@ pub struct EqualsQuery<'a, T, const N: usize, const FANOUT: usize> {
     hiv: &'a HiVec<T, N, FANOUT>,
 }
 
-impl<'a, T: Ord + Copy, const N: usize, const FANOUT: usize> HiQuery<N, FANOUT>
+impl<'a, T: Lattice + Copy, const N: usize, const FANOUT: usize> HiQuery<N, FANOUT>
     for EqualsQuery<'a, T, N, FANOUT>
 {
     fn length(&self) -> usize {
@@ -114,4 +114,32 @@ impl<'a, T: Ord + Copy, const N: usize, const FANOUT: usize> HiQuery<N, FANOUT>
             self.hiv.layers[layer - 1][i].contains(&self.item)
         }
     }
+}
+
+pub struct RangeQuery<'a, T, const N: usize, const FANOUT: usize> {
+    range: LatticeRange<T>,
+    hiv: &'a HiVec<T, N, FANOUT>,
+}
+
+
+impl<'a, T: Lattice + Copy, const N: usize, const FANOUT: usize> HiQuery<N, FANOUT>
+    for RangeQuery<'a, T, N, FANOUT>
+{
+    fn length(&self) -> usize {
+        self.hiv.len()
+    }
+    fn query_at(&self, i: usize) -> bool {
+        self.hiv
+            .get(i)
+            .map(|x| self.range.contains(x))
+            .expect("Out of bounds")
+    }
+    fn hiquery(&self, layer: usize, i: usize) -> bool {
+        if layer == 0 {
+            self.query_at(i)
+        } else {
+            !(self.hiv.layers[layer - 1][i].intersect(self.range).isempty())
+        }
+    }
+
 }
