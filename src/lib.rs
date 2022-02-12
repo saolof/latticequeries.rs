@@ -46,8 +46,8 @@ mod tests {
         assert_eq!(q2.findnext(8), None);
         assert_eq!(q2.findnext(9), None);
 
-        assert_eq!(q1.count(), 4);
         println!("IterTest");
+        assert_eq!(q1.count(), 4);
         assert_eq!(q2.count(), 5);
         assert_eq!(q1.count() + q2.count(), hv.len());
     }

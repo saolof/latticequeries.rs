@@ -98,8 +98,6 @@ impl<T: Copy + Lattice, const N: usize, const FANOUT: usize> HiVec<T, N, FANOUT>
     pub fn query_range(&self, range: LatticeRange<T>) -> RangeQuery<T, N, FANOUT> {
         RangeQuery { range, hiv: self }
     }
-
-
 }
 
 pub struct EqualsQuery<'a, T, const N: usize, const FANOUT: usize> {
