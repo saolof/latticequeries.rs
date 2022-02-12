@@ -65,6 +65,10 @@ pub trait HiQuery<const N: usize, const FANOUT: usize> {
             q2: other,
         }
     }
+
+    fn iter(&self) -> HiQIter<Self,N, FANOUT> where Self: Sized {
+        HiQIter {hq : self, i: 0}
+    }
 }
 
 #[derive(Copy, Clone)]
