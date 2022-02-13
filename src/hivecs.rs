@@ -1,4 +1,4 @@
-use crate::hiqueries::HiQuery;
+use crate::hiqueries::{HiQuery, NegatableQuery};
 use crate::lattices::{Lattice, LatticeRange};
 
 #[derive(Debug, Clone)]
@@ -122,6 +122,20 @@ impl<'a, T: Lattice + Copy, const N: usize, const FANOUT: usize> HiQuery<N, FANO
             self.query_at(i)
         } else {
             self.hiv.layers[layer - 1][i].contains(&self.item)
+        }
+    }
+}
+
+// Todo: implement negation properly for more types.
+
+impl<'a, const N: usize, const FANOUT: usize> NegatableQuery<N, FANOUT>
+    for EqualsQuery<'a, bool, N, FANOUT>
+{
+    type NegType = Self;
+    fn negation(self: &std::sync::Arc<Self>) -> Self::NegType {
+        Self {
+            item: !self.item,
+            hiv: self.hiv,
         }
     }
 }

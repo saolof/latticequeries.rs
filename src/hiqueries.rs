@@ -1,9 +1,24 @@
+use std::sync::Arc;
+
+/*
+Trait for lazy heirarchical query objects. Building a tree of them lets you
+build boolean queries, and consider which power-of-FANOUT blocks in a vec contain a
+solution to said query, so that they can be found with binary search.
+
+The iter() method gives you an iterator over the indices of the query results.
+*/
 pub trait HiQuery<const N: usize, const FANOUT: usize> {
     fn length(&self) -> usize;
-
     fn query_at(&self, i: usize) -> bool;
+
+    /*
+    Should return whether query_at(i) is true for a chunk of length FANOUT^layer elements.
+    */
     fn hiquery(&self, layer: usize, i: usize) -> bool; // Layers in range 0 ..= N
 
+    /*
+    Finds the next index after i (including i itself) that for which queryat(i) is true.
+    */
     fn findnext(&self, mut i: usize) -> Option<usize> {
         while i < self.length() {
             if self.query_at(i) {
@@ -32,16 +47,10 @@ pub trait HiQuery<const N: usize, const FANOUT: usize> {
         return n;
     }
 
-    fn not<'a>(&'a self) -> NotQuery<'a, N, FANOUT>
-    where
-        Self: Sized,
-    {
-        NotQuery { q: self }
-    }
-    fn and<'a, 'b>(
-        &'a self,
-        other: &'b (impl HiQuery<N, FANOUT> + Sized),
-    ) -> AndQuery<'a, 'b, N, FANOUT>
+    fn and<Q2: HiQuery<N, FANOUT> + Sized>(
+        self: Arc<Self>,
+        other: Arc<Q2>,
+    ) -> AndQuery<Self, Q2, N, FANOUT>
     where
         Self: Sized,
     {
@@ -52,10 +61,10 @@ pub trait HiQuery<const N: usize, const FANOUT: usize> {
         }
     }
 
-    fn or<'a, 'b>(
-        &'a self,
-        other: &'b (impl HiQuery<N, FANOUT> + Sized),
-    ) -> OrQuery<'a, 'b, N, FANOUT>
+    fn or<Q2: HiQuery<N, FANOUT> + Sized>(
+        self: Arc<Self>,
+        other: Arc<Q2>,
+    ) -> OrQuery<Self, Q2, N, FANOUT>
     where
         Self: Sized,
     {
@@ -66,40 +75,41 @@ pub trait HiQuery<const N: usize, const FANOUT: usize> {
         }
     }
 
-    fn iter(&self) -> HiQIter<Self,N, FANOUT> where Self: Sized {
-        HiQIter {hq : self, i: 0}
+    fn iter(&self) -> HiQIter<Self, N, FANOUT>
+    where
+        Self: Sized,
+    {
+        HiQIter { hq: self, i: 0 }
+    }
+
+    fn rc(self) -> Arc<Self>
+    where
+        Self: Sized,
+    {
+        Arc::new(self)
     }
 }
 
-#[derive(Copy, Clone)]
-pub struct NotQuery<'a, const N: usize, const FANOUT: usize> {
-    q: &'a dyn HiQuery<N, FANOUT>,
-}
-#[derive(Copy, Clone)]
-pub struct AndQuery<'a, 'b, const N: usize, const FANOUT: usize> {
-    q1: &'a dyn HiQuery<N, FANOUT>,
-    q2: &'b dyn HiQuery<N, FANOUT>,
-}
-#[derive(Copy, Clone)]
-pub struct OrQuery<'a, 'b, const N: usize, const FANOUT: usize> {
-    q1: &'a dyn HiQuery<N, FANOUT>,
-    q2: &'b dyn HiQuery<N, FANOUT>,
+pub trait NegatableQuery<const N: usize, const FANOUT: usize>: HiQuery<N, FANOUT> {
+    type NegType: NegatableQuery<N, FANOUT>;
+    fn negation(self: &Arc<Self>) -> Self::NegType;
 }
 
-impl<'a, const N: usize, const FANOUT: usize> HiQuery<N, FANOUT> for NotQuery<'a, N, FANOUT> {
-    fn query_at(&self, i: usize) -> bool {
-        self.q.query_at(i)
-    }
-    fn hiquery(&self, layer: usize, i: usize) -> bool {
-        self.q.hiquery(layer, i)
-    }
-    fn length(&self) -> usize {
-        self.q.length()
-    }
+#[derive(Clone)]
+pub struct AndQuery<Q1, Q2, const N: usize, const FANOUT: usize> {
+    q1: Arc<Q1>,
+    q2: Arc<Q2>,
+}
+#[derive(Clone)]
+pub struct OrQuery<Q1, Q2, const N: usize, const FANOUT: usize> {
+    q1: Arc<Q1>,
+    q2: Arc<Q2>,
 }
 
-impl<'a, 'b, const N: usize, const FANOUT: usize> HiQuery<N, FANOUT>
-    for AndQuery<'a, 'b, N, FANOUT>
+impl<Q1, Q2, const N: usize, const FANOUT: usize> HiQuery<N, FANOUT> for AndQuery<Q1, Q2, N, FANOUT>
+where
+    Q1: HiQuery<N, FANOUT>,
+    Q2: HiQuery<N, FANOUT>,
 {
     fn query_at(&self, i: usize) -> bool {
         self.q1.query_at(i) && self.q2.query_at(i)
@@ -112,8 +122,10 @@ impl<'a, 'b, const N: usize, const FANOUT: usize> HiQuery<N, FANOUT>
     }
 }
 
-impl<'a, 'b, const N: usize, const FANOUT: usize> HiQuery<N, FANOUT>
-    for OrQuery<'a, 'b, N, FANOUT>
+impl<Q1, Q2, const N: usize, const FANOUT: usize> HiQuery<N, FANOUT> for OrQuery<Q1, Q2, N, FANOUT>
+where
+    Q1: HiQuery<N, FANOUT>,
+    Q2: HiQuery<N, FANOUT>,
 {
     fn query_at(&self, i: usize) -> bool {
         self.q1.query_at(i) || self.q2.query_at(i)
@@ -123,6 +135,38 @@ impl<'a, 'b, const N: usize, const FANOUT: usize> HiQuery<N, FANOUT>
     }
     fn length(&self) -> usize {
         self.q1.length()
+    }
+}
+
+impl<Q1, Q2, const N: usize, const FANOUT: usize> NegatableQuery<N, FANOUT>
+    for AndQuery<Q1, Q2, N, FANOUT>
+where
+    Q1: NegatableQuery<N, FANOUT>,
+    Q2: NegatableQuery<N, FANOUT>,
+{
+    type NegType = OrQuery<Q1::NegType, Q2::NegType, N, FANOUT>;
+
+    fn negation(self: &Arc<Self>) -> Self::NegType {
+        Self::NegType {
+            q1: self.q1.negation().rc(),
+            q2: self.q2.negation().rc(),
+        }
+    }
+}
+
+impl<Q1, Q2, const N: usize, const FANOUT: usize> NegatableQuery<N, FANOUT>
+    for OrQuery<Q1, Q2, N, FANOUT>
+where
+    Q1: NegatableQuery<N, FANOUT>,
+    Q2: NegatableQuery<N, FANOUT>,
+{
+    type NegType = AndQuery<Q1::NegType, Q2::NegType, N, FANOUT>;
+
+    fn negation(self: &Arc<Self>) -> Self::NegType {
+        Self::NegType {
+            q1: self.q1.negation().rc(),
+            q2: self.q2.negation().rc(),
+        }
     }
 }
 
